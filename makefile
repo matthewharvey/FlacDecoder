@@ -4,13 +4,13 @@ all: flac_decoder
 flac_decoder: FlacDecoder.o FlacSubFrame.o main.o
 	g++ -o flac_decoder FlacDecoder.o FlacSubFrame.o main.o
 
-FlacDecoder.o : FlacDecoder.cpp FlacDecoder.hpp
+FlacDecoder.o : FlacDecoder.cpp FlacDecoder.hpp FlacSubFrame.hpp
 	g++ $(CPPFLAGS) -c FlacDecoder.cpp
 
 FlacSubFrame.o: FlacSubFrame.cpp FlacSubFrame.hpp
 	g++ $(CPPFLAGS) -c FlacSubFrame.cpp
 
-main.o: main.cpp
+main.o: main.cpp FlacDecoder.hpp
 	g++ $(CPPFLAGS) -c main.cpp
 
 clean:
