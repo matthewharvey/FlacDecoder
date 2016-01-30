@@ -1,0 +1,4 @@
+*.swp
+*.o
+*.flac
+flac_decoder
