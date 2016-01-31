@@ -130,6 +130,7 @@ private:
     void translate_channel_assignment_strategy(uint8 channel_assignment_strategy, EChannelAssignment* channel_assignment, uint8* num_channels);
     void translate_sample_size_strategy(ESampleSizeStrategy sample_size_strategy, uint8* sample_size_bits);
     void read_sample_or_frame_number_string(EBlockingStrategy blocking_strategy);
+    int get_total_bytes_from_first_byte(uint8 first_byte);
 
     //other stuff
     uint32 u8touint(uint8 a, uint8 b, uint8 c = 0, uint8 d = 0);

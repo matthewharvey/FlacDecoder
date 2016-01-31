@@ -17,6 +17,8 @@ void FlacDecoder::parse_flac_stream()
     assert(parse_header_data() == 0);
     assert(parse_metadata_blocks() == 0);
     parse_frame();
+    parse_frame();
+    parse_frame();
     while (m_in.eof() != true)
     {
         parse_frame_fake();
@@ -33,7 +35,7 @@ int FlacDecoder::parse_header_data()
     {
         if (entry_data[i] != entry_data_expected[i])
         {
-            std::cerr << "Stream did not begin with fLaC as expected, but with " << entry_data;
+            std::cerr << "Stream did not begin with fLaC as expected, but with " << entry_data << std::endl;
             return -1;
         }
     }
@@ -55,8 +57,8 @@ int FlacDecoder::parse_metadata_block(bool* is_last_metadata_block)
 {
     uint8 header_data[4];
     m_in.read((char*)header_data, 4);
-    *is_last_metadata_block = ((header_data[0] & 0x01) == 1);
-    EMetadataType metadata_type = (EMetadataType)(header_data[0] >> 1);
+    *is_last_metadata_block = ((header_data[0] >> 7) == 1);
+    EMetadataType metadata_type = (EMetadataType)(header_data[0] & 0x7F);
     unsigned int length = u8touint(header_data[3], header_data[2], header_data[1]);
     return parse_metadata_block_data(metadata_type, length);
 }
@@ -64,21 +66,36 @@ int FlacDecoder::parse_metadata_block(bool* is_last_metadata_block)
 int FlacDecoder::parse_metadata_block_data(EMetadataType metadata_type, unsigned int length)
 {
     uint8* metadata_block_data = new uint8[length];
+    std::cerr << "length is " << length << std::endl;
     m_in.read((char*)metadata_block_data, length);
     switch (metadata_type)
     {
     case STREAMINFO:
+        std::cerr << "Encountering a Streaminfo block" << std::endl;
         assert(length == 34);
         read_stream_info(metadata_block_data);
         assert(check_stream_info() == 0);
         break;
     case PADDING:
+        std::cerr << "Encountering a Padding block" << std::endl;
+        break;
     case APPLICATION:
+        std::cerr << "Encountering a Application block" << std::endl;
+        break;
     case SEEKTABLE:
+        std::cerr << "Encountering a Seektable block" << std::endl;
+        break;
     case VORBIS_COMMENT:
+        std::cerr << "Encountering a Comment block" << std::endl;
+        break;
     case CUESHEET:
+        std::cerr << "Encountering a Cuesheet block" << std::endl;
+        break;
     case PICTURE:
+        std::cerr << "Encountering a Picture block" << std::endl;
+        break;
     default:
+        std::cerr << "Encountering a Unknown block " << (int)metadata_type << std::endl;
         break;
     }
     delete [] metadata_block_data;
@@ -118,10 +135,9 @@ void FlacDecoder::parse_frame_fake()
 void FlacDecoder::parse_frame()
 {
     SFrameInformation frame_info;
+    memset(&frame_info, 0, sizeof(frame_info));
     parse_frame_header(&frame_info);
     parse_frame_data(frame_info);
-    FlacSubFrame sub_frame(m_in, m_out, frame_info);
-    sub_frame.process();
     parse_frame_footer(&frame_info);
 }
 
@@ -158,7 +174,7 @@ void FlacDecoder::parse_frame_header(SFrameInformation* frame_info)
         bool reserved_bit_2 = ((initial_data[3] & 0x01) == 1);
         if (reserved_bit_2 == true)
         {
-            std::cerr << "Reserved bit is not 0";
+            std::cerr << "Reserved bit is not 0" << std::endl;
         }
 
         read_sample_or_frame_number_string(frame_info->blocking_strategy);
@@ -211,7 +227,17 @@ void FlacDecoder::parse_frame_header(SFrameInformation* frame_info)
 
 void FlacDecoder::translate_block_size_strategy(uint8 block_size_strategy, bool* need_to_read_block_size_from_bottom, uint32* block_size)
 {
-        switch (block_size_strategy)
+        EBlockSizeStrategy strategy_translated = (EBlockSizeStrategy)block_size_strategy;
+        if ((block_size_strategy >= 2) && (block_size_strategy <= 5))
+        {
+            strategy_translated = POW_OF_2_MINUS_2;
+        }
+        else if (block_size_strategy >= 8)
+        {
+            strategy_translated = POW_OF_2_MINUS_8;
+        }
+
+        switch (strategy_translated)
         {
         case FIXED_192:
             *need_to_read_block_size_from_bottom = false;
@@ -353,27 +379,60 @@ void FlacDecoder::translate_sample_size_strategy(ESampleSizeStrategy sample_size
 
 void FlacDecoder::read_sample_or_frame_number_string(EBlockingStrategy blocking_strategy)
 {
-    char string_data[5];
-    char current_character = 'm';
+    char frame_number[7];
+    /*char current_character = 'm';
     int i = 0;
     do
     {
         m_in.read(&current_character, 1);
         string_data[i] = current_character;
         ++i;
-    } while (current_character != '\0');
-    std::cerr << ((blocking_strategy == FIXED_BLOCKSIZE) ? "Frame" : "Sample") << " number is " << std::string(string_data) << std::endl;
+    } while (current_character != 0);*/
+    uint8 first_byte;
+    m_in.read((char*)&first_byte, 1);
+    frame_number[0] = first_byte;
+    int num_bytes_total = get_total_bytes_from_first_byte(first_byte);
+    if (num_bytes_total - 1 > 0)
+    {
+        m_in.read(frame_number, num_bytes_total - 1);
+    }
+    //frame_number = frame_number << (8 * (num_bytes_total - 1));
+    std::cerr << ((blocking_strategy == FIXED_BLOCKSIZE) ? "Frame" : "Sample") << " number is " << (int)frame_number[0] << std::endl;
+}
+
+int FlacDecoder::get_total_bytes_from_first_byte(uint8 first_byte)
+{
+    /*int num_bytes = 0;
+    int mask = 0x80;
+    while ((first_byte & mask) == 1)
+    {
+        mask >>= 1;
+        ++num_bytes;
+    }
+
+    if (num_bytes == 0)
+    {
+        num_bytes = 1;
+    }
+
+    return num_bytes;*/
+    return 1;
 }
 
 void FlacDecoder::parse_frame_data(const SFrameInformation& frame_info)
 {
-    uint8* data = (uint8*)malloc(sizeof(uint8) * frame_info.block_size);
-    m_in.read((char*)data, frame_info.block_size);
+    for (int i = 0; i < frame_info.num_channels; ++i)
+    {
+        std::cerr << "Processing subframe " << i << std::endl;
+        FlacSubFrame sub_frame(m_in, m_out, frame_info);
+        sub_frame.process();
+    }
 }
 
 void FlacDecoder::parse_frame_footer(SFrameInformation* frame_info)
 {
     m_in.read((char*)&(frame_info->data_crc), 2);
+    std::cerr << "crc is " << frame_info->data_crc << std::endl;
 }
 
 /*
