@@ -421,12 +421,13 @@ int FlacDecoder::get_total_bytes_from_first_byte(uint8 first_byte)
 
 void FlacDecoder::parse_frame_data(const SFrameInformation& frame_info)
 {
+    BitReader br(m_in);
     for (int i = 0; i < frame_info.num_channels; ++i)
     {
-        std::cerr << "Processing subframe " << i << std::endl;
-        FlacSubFrame sub_frame(m_in, m_out, frame_info);
+        FlacSubFrame sub_frame(br, frame_info);
         sub_frame.process();
     }
+    std::cerr << "Read " << br.GetBytesRead() << " bytes" << std::endl;
 }
 
 void FlacDecoder::parse_frame_footer(SFrameInformation* frame_info)

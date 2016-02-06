@@ -1,17 +1,21 @@
 CPPFLAGS=-std=c++11 -g -Wall
 all: flac_decoder
+OBJECTS=FlacDecoder.o FlacSubFrame.o BitReader.o main.o
 
-flac_decoder: FlacDecoder.o FlacSubFrame.o main.o
-	g++ -o flac_decoder FlacDecoder.o FlacSubFrame.o main.o
+flac_decoder: $(OBJECTS)
+	g++ -o flac_decoder $(OBJECTS)
 
-FlacDecoder.o : FlacDecoder.cpp FlacDecoder.hpp FlacSubFrame.hpp
+BitReader.o : BitReader.cpp BitReader.hpp
+	g++ $(CPPFLAGS) -c BitReader.cpp
+
+FlacDecoder.o : FlacDecoder.cpp FlacDecoder.hpp FlacSubFrame.hpp BitReader.hpp
 	g++ $(CPPFLAGS) -c FlacDecoder.cpp
 
-FlacSubFrame.o: FlacSubFrame.cpp FlacSubFrame.hpp
+FlacSubFrame.o: FlacSubFrame.cpp FlacSubFrame.hpp BitReader.hpp
 	g++ $(CPPFLAGS) -c FlacSubFrame.cpp
 
 main.o: main.cpp FlacDecoder.hpp
 	g++ $(CPPFLAGS) -c main.cpp
 
 clean:
-	rm -f FlacDecoder.o FlacSubFrame.o main.o
+	rm -f $(OBJECTS)
