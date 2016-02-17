@@ -1,4 +1,9 @@
 *.swp
 *.o
 *.flac
+#Test file
+Roxanne.*
 flac_decoder
+test
+writeHexToFile
+tags
