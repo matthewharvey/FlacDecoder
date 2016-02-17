@@ -16,13 +16,10 @@ void FlacDecoder::parse_flac_stream()
 {
     assert(parse_header_data() == 0);
     assert(parse_metadata_blocks() == 0);
-    parse_frame();
-    parse_frame();
-    parse_frame();
     while (m_in.eof() != true)
     {
-        parse_frame_fake();
-        //parse_frame();
+        //parse_frame_fake();
+        parse_frame();
     }
 }
 
@@ -149,6 +146,7 @@ void FlacDecoder::parse_frame_header(SFrameInformation* frame_info)
     if (sync_code != 0x3FFE)
     {
         std::cerr << "sync code is " << sync_code << " instead of 0x3ffe" << std::endl;
+        exit(-1);
     }
     bool reserved_bit = ((initial_data[1] & 0x02) == 1);
     if (reserved_bit == true)
@@ -181,6 +179,7 @@ void FlacDecoder::parse_frame_header(SFrameInformation* frame_info)
 
         if (need_to_read_block_size_from_bottom == true)
         {
+            std::cerr << "Reading block size from bottom of header" << std::endl;
             if (frame_info->block_size == 16)
             {
                 uint8 block_size_data[2];
@@ -200,6 +199,7 @@ void FlacDecoder::parse_frame_header(SFrameInformation* frame_info)
         
         if (need_to_read_sample_rate_from_bottom == true)
         {
+            std::cerr << "Reading sample rate from bottom of header" << std::endl;
             if (frame_info->sample_rate == 8)
             {
                 m_in.read((char*)&(frame_info->sample_rate), 1);
@@ -380,14 +380,6 @@ void FlacDecoder::translate_sample_size_strategy(ESampleSizeStrategy sample_size
 void FlacDecoder::read_sample_or_frame_number_string(EBlockingStrategy blocking_strategy)
 {
     char frame_number[7];
-    /*char current_character = 'm';
-    int i = 0;
-    do
-    {
-        m_in.read(&current_character, 1);
-        string_data[i] = current_character;
-        ++i;
-    } while (current_character != 0);*/
     uint8 first_byte;
     m_in.read((char*)&first_byte, 1);
     frame_number[0] = first_byte;
@@ -419,7 +411,7 @@ int FlacDecoder::get_total_bytes_from_first_byte(uint8 first_byte)
     return 1;
 }
 
-void FlacDecoder::parse_frame_data(const SFrameInformation& frame_info)
+void FlacDecoder::parse_frame_data(SFrameInformation& frame_info)
 {
     BitReader br(m_in);
     for (int i = 0; i < frame_info.num_channels; ++i)
@@ -427,7 +419,7 @@ void FlacDecoder::parse_frame_data(const SFrameInformation& frame_info)
         FlacSubFrame sub_frame(br, frame_info);
         sub_frame.process();
     }
-    std::cerr << "Read " << br.GetBytesRead() << " bytes" << std::endl;
+    std::cerr << "Bits left is " << br.GetBitsLeft() << std::endl;
 }
 
 void FlacDecoder::parse_frame_footer(SFrameInformation* frame_info)

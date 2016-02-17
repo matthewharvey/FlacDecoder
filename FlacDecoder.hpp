@@ -5,6 +5,8 @@
 #include <ostream>
 #include <cstdint>
 
+#include "BitReader.hpp"
+
 
 class FlacDecoder
 {
@@ -123,7 +125,7 @@ private:
     void parse_frame();
     void parse_frame_fake();
     void parse_frame_header(SFrameInformation* frame_info);
-    void parse_frame_data(const SFrameInformation& frame_info);
+    void parse_frame_data(SFrameInformation& frame_info);
     void parse_frame_footer(SFrameInformation* frame_info);
     void translate_block_size_strategy(uint8 block_size_strategy, bool* need_to_read_block_size_from_bottom, uint32* block_size);
     void translate_sample_rate_strategy(uint8 sample_rate_strategy, bool* need_to_read_sample_rate_from_bottom, uint32* sample_rate);

@@ -1,31 +1,47 @@
 #include <cassert>
+#include <cstring>
 
 #include "BitReader.hpp"
 
 BitReader::BitReader(std::istream& stream)
 : m_stream(stream),
+m_currentByte(0),
+m_bitsLeft(0),
+m_bitsLeftMask(0),
 m_bytesRead(0)
 {
-    ReadNextByte();
 }
 
-void BitReader::ReadBits(uint8* buffer, unsigned int bits)
+uint32_t BitReader::ReadInt(unsigned int bits)
 {
-    unsigned int leftover_bits = bits % 8;
-    unsigned int bytes = bits / 8;
-    if (leftover_bits == m_bitsLeft)
+    assert(bits <= 32);
+    uint8 buffer[4];
+    unsigned int bitsRead = 0;
+    for (int b = 32, i = 0; i < 4; b-=8,++i)
     {
-        buffer[0] = ReadBitsLessThanByte(m_bitsLeft);
-        ReadByteBlock((char*)&(buffer[1]), bytes);
-    }
-    else
-    {
-        buffer[0] = ReadBitsLessThanByte(leftover_bits);
-        for (unsigned int i = 1; i <= bytes; ++i)
+        int bitsToRead = 8 - (b - bits);
+        if (bitsToRead > 8)
         {
             buffer[i] = ReadBitsLessThanByte(8);
+            bitsRead += 8;
+        }
+        else if (bitsToRead > 0)
+        {
+            buffer[i] = ReadBitsLessThanByte((unsigned int)bitsToRead);
+            bitsRead += bitsToRead;
+        }
+        else
+        {
+            buffer[i] = 0;
         }
     }
+    assert(bitsRead == bits);
+    uint32_t retval = 0;
+    retval |= (buffer[0] << 24);
+    retval |= (buffer[1] << 16);
+    retval |= (buffer[2] << 8);
+    retval |= (buffer[3]);
+    return retval;
 }
 
 uint8_t BitReader::ReadBits(unsigned int bits)
@@ -72,9 +88,15 @@ unsigned int BitReader::GetBytesRead()
     return m_bytesRead;
 }
 
+unsigned int BitReader::GetBitsLeft()
+{
+    return m_bitsLeft;
+}
+
 void BitReader::ReadNextByte()
 {
-    m_stream.read((char*)&m_currentByte, 1);
+    m_currentByte = m_stream.get();
+    //m_stream.read((char*)&m_currentByte, 1);
     m_bitsLeft = 8;
     m_bitsLeftMask = 0xFF;
     ++m_bytesRead;

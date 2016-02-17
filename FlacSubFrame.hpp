@@ -10,9 +10,10 @@ public:
     FlacSubFrame(BitReader& br, const FlacDecoder::SFrameInformation& frame_info);
     ~FlacSubFrame();
     void process();
-    uint8_t* getData();
+    uint32_t* getData();
 private:
     using uint8=uint8_t;
+    using uint32=uint32_t;
     enum EType
     {
         SUBFRAME_CONSTANT = 0x00,
@@ -28,6 +29,8 @@ private:
     void parse_verbatim_subframe();
     void parse_fixed_subframe();
     void parse_lpc_subframe();
+    void read_and_add_residuals();
+    int signed_twos_complement_to_int(uint32 data, uint8 numBits);
     BitReader& m_br;
     const FlacDecoder::SFrameInformation& m_frameInfo;
     bool m_processed;
@@ -36,5 +39,5 @@ private:
     uint8 m_wastedBitsPerSample;
     uint8 m_bytesPerSample;
 
-    uint8* m_output_samples;
+    uint32* m_output_samples;
 };
